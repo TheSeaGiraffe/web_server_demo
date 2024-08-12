@@ -9,6 +9,7 @@ import (
 func main() {
 	// Setup routing
 	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 
 	// Setup and run server
 	port := "8080"
