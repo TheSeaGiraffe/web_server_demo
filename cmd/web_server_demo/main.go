@@ -15,8 +15,8 @@ func main() {
 	fileServer := http.FileServer(http.Dir(filepathRoot))
 	mux := http.NewServeMux()
 	mux.Handle("/app/*", apiCfg.MiddlewareMetricsInc(http.StripPrefix("/app", fileServer)))
+	mux.HandleFunc("GET /admin/metrics", apiCfg.AdminMetricsHandler)
 	mux.HandleFunc("GET /api/healthz", readinessHandler)
-	mux.HandleFunc("GET /api/metrics", apiCfg.GetHits)
 	mux.HandleFunc("GET /api/reset", apiCfg.ResetHits)
 
 	// Setup and run server

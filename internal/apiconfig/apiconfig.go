@@ -17,20 +17,25 @@ func NewApiConfig() *ApiConfig {
 
 func (cfg *ApiConfig) MiddlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// log.Println("Calling the 'MetricsInc' middleware")
 		cfg.fileserverHits++
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (cfg *ApiConfig) GetHits(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits)))
 }
 
 func (cfg *ApiConfig) ResetHits(w http.ResponseWriter, r *http.Request) {
 	cfg.fileserverHits = 0
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("File server hits count has been reset to 0"))
+}
+
+func (cfg *ApiConfig) AdminMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf(`
+<html>
+    <body>
+        <h1>Welcome, Chirpy Admin</h1>
+        <p>Chirpy has been visited %d times!</p>
+    </body>
+</html>`, cfg.fileserverHits)))
 }
