@@ -1,6 +1,7 @@
 package main
 
 import (
+	"learn_web_servers/web_server_demo/internal/apiconfig"
 	"log"
 	"net/http"
 )
@@ -10,9 +11,13 @@ func main() {
 	const port = "8080"
 
 	// Setup routing
+	apiCfg := apiconfig.NewApiConfig()
+	fileServer := http.FileServer(http.Dir(filepathRoot))
 	mux := http.NewServeMux()
-	mux.Handle("/app/*", http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	mux.Handle("/app/*", apiCfg.MiddlewareMetricsInc(http.StripPrefix("/app", fileServer)))
 	mux.HandleFunc("/healthz", readinessHandler)
+	mux.HandleFunc("/metrics", apiCfg.GetHits)
+	mux.HandleFunc("/reset", apiCfg.ResetHits)
 
 	// Setup and run server
 	srv := http.Server{
