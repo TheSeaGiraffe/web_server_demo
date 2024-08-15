@@ -1,4 +1,4 @@
-package apiconfig
+package handlers
 
 import (
 	"fmt"
