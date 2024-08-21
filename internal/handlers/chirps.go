@@ -4,7 +4,27 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
+
+const replacementString = "****"
+
+var badWords = map[string]struct{}{
+	"kerfuffle": {},
+	"sharbert":  {},
+	"fornax":    {},
+}
+
+func replaceBadWords(chirp string) string {
+	chirpSplit := strings.Fields(chirp)
+	for i, word := range chirpSplit {
+		_, ok := badWords[strings.ToLower(word)]
+		if ok {
+			chirpSplit[i] = replacementString
+		}
+	}
+	return strings.Join(chirpSplit, " ")
+}
 
 func ValidateChirpHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the JSON from the response body
@@ -25,8 +45,11 @@ func ValidateChirpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Remove profanity
+	cleanedBody := replaceBadWords(input.Body)
+
 	// Response is valid
-	output := map[string]bool{"valid": true}
+	output := map[string]string{"cleaned_body": cleanedBody}
 	err = writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
