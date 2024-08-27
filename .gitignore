@@ -1,2 +1,9 @@
 # Ignore the bin directory
 bin/
+
+# Ignore everything in cmd except cmd/web_server_demo
+cmd/
+!cmd/web_server_demo/
+
+# Ignore db files
+chirp_db*.json
