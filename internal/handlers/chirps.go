@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"cmp"
 	"encoding/json"
+	"learn_web_servers/web_server_demo/internal/database"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -15,7 +18,11 @@ var badWords = map[string]struct{}{
 	"fornax":    {},
 }
 
-func replaceBadWords(chirp string) string {
+type ChirpController struct {
+	DB *database.DB
+}
+
+func (c *ChirpController) replaceBadWords(chirp string) string {
 	chirpSplit := strings.Fields(chirp)
 	for i, word := range chirpSplit {
 		_, ok := badWords[strings.ToLower(word)]
@@ -26,7 +33,7 @@ func replaceBadWords(chirp string) string {
 	return strings.Join(chirpSplit, " ")
 }
 
-func ValidateChirpHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ChirpController) CreateChirpHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the JSON from the response body
 	var input struct {
 		Body string `json:"body"`
@@ -46,11 +53,41 @@ func ValidateChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Remove profanity
-	cleanedBody := replaceBadWords(input.Body)
+	cleanedBody := c.replaceBadWords(input.Body)
+	chirp, err := c.DB.CreateChirp(cleanedBody)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Response is valid
-	output := map[string]string{"cleaned_body": cleanedBody}
-	err = writeJSON(w, http.StatusOK, output, nil)
+	// output := map[string]string{"cleaned_body": cleanedBody}
+	// err = writeJSON(w, http.StatusOK, output, nil)
+	err = writeJSON(w, http.StatusCreated, chirp, nil)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+	}
+}
+
+func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get chirps from database
+	chirps, err := c.DB.GetChirps()
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Couldn't load chirps from database")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Sort the chirps
+	if len(chirps) > 0 {
+		slices.SortFunc(chirps, func(a, b database.Chirp) int {
+			return cmp.Compare(a.ID, b.ID)
+		})
+	}
+
+	// Return the chirps in a json response
+	err = writeJSON(w, http.StatusOK, chirps, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}

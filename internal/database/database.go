@@ -56,9 +56,16 @@ func (db *DB) loadDB() (DBStructure, error) {
 	if err != nil {
 		return DBStructure{}, fmt.Errorf("error reading DB file: %w", err)
 	}
+
+	if len(dbFile) == 0 {
+		// This should only happen if the database is empty which is only the case
+		// if you run the server without a DB. An empty DB is still a valid state
+		// and shouldn't error
+		return DBStructure{}, nil
+	}
+
 	var chirpDBStruct DBStructure
 	err = json.Unmarshal(dbFile, &chirpDBStruct)
-	// err = json.NewDecoder(bytes.NewBuffer(dbFile)).Decode(&chirpDBStruct)
 	if err != nil {
 		return DBStructure{}, fmt.Errorf("error loading DB file: %w", err)
 	}
@@ -116,6 +123,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	}
 
 	// Write chirp to disk
+	if len(chirpDBStruct.Chirps) == 0 {
+		chirpDBStruct.Chirps = make(map[int]Chirp)
+	}
 	chirpDBStruct.Chirps[lastID] = chirp
 	err = db.writeDB(chirpDBStruct)
 	if err != nil {
@@ -133,6 +143,10 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	chirpDBStruct, err := db.loadDB()
 	if err != nil {
 		return []Chirp{}, err
+	}
+
+	if len(chirpDBStruct.Chirps) == 0 {
+		return []Chirp{}, nil
 	}
 
 	var chirps []Chirp
