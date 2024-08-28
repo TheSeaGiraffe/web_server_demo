@@ -3,11 +3,12 @@ package handlers
 import (
 	"cmp"
 	"encoding/json"
-	"learn_web_servers/web_server_demo/internal/database"
 	"log"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/TheSeaGiraffe/web_server_demo/internal/database"
 )
 
 const replacementString = "****"
@@ -22,7 +23,7 @@ type ChirpController struct {
 	DB *database.DB
 }
 
-func (c *ChirpController) replaceBadWords(chirp string) string {
+func replaceBadWords(chirp string) string {
 	chirpSplit := strings.Fields(chirp)
 	for i, word := range chirpSplit {
 		_, ok := badWords[strings.ToLower(word)]
@@ -53,7 +54,7 @@ func (c *ChirpController) CreateChirpHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Remove profanity
-	cleanedBody := c.replaceBadWords(input.Body)
+	cleanedBody := replaceBadWords(input.Body)
 	chirp, err := c.DB.CreateChirp(cleanedBody)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")

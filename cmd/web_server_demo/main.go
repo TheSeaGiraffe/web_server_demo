@@ -1,10 +1,11 @@
 package main
 
 import (
-	"learn_web_servers/web_server_demo/internal/database"
-	"learn_web_servers/web_server_demo/internal/handlers"
 	"log"
 	"net/http"
+
+	"github.com/TheSeaGiraffe/web_server_demo/internal/database"
+	"github.com/TheSeaGiraffe/web_server_demo/internal/handlers"
 )
 
 func main() {
