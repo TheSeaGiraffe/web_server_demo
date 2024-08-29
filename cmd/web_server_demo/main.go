@@ -33,6 +33,7 @@ func main() {
 	mux.HandleFunc("GET /api/reset", apiOps.ResetHits)
 	mux.HandleFunc("POST /api/chirps", chirpC.CreateChirpHandler)
 	mux.HandleFunc("GET /api/chirps", chirpC.GetChirpsHandler)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", chirpC.GetSingleChirpHandler)
 
 	// Setup and run server
 	srv := http.Server{

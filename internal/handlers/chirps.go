@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/database"
@@ -42,7 +43,6 @@ func (c *ChirpController) CreateChirpHandler(w http.ResponseWriter, r *http.Requ
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Couldn't decode parameters")
-		w.WriteHeader(500)
 		return
 	}
 
@@ -58,7 +58,6 @@ func (c *ChirpController) CreateChirpHandler(w http.ResponseWriter, r *http.Requ
 	chirp, err := c.DB.CreateChirp(cleanedBody)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -76,7 +75,6 @@ func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Reques
 	chirps, err := c.DB.GetChirps()
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Couldn't load chirps from database")
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -89,6 +87,28 @@ func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Reques
 
 	// Return the chirps in a json response
 	err = writeJSON(w, http.StatusOK, chirps, nil)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+	}
+}
+
+func (c *ChirpController) GetSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
+	// Get chirp ID from URL path
+	chirpIDStr := r.PathValue("chirpID")
+	chirpID, err := strconv.Atoi(chirpIDStr)
+	if err != nil {
+		errorResponse(w, http.StatusBadRequest, "Invalid chirp ID")
+		return
+	}
+
+	// Get the chirp with the specified ID
+	chirp, err := c.DB.GetChirpByID(chirpID)
+	if err != nil {
+		errorResponse(w, http.StatusNotFound, "Chirp with that ID doesn't exist")
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, chirp, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}

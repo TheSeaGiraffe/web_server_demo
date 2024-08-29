@@ -30,6 +30,6 @@ func errorResponse(w http.ResponseWriter, status int, message any) {
 	err := writeJSON(w, status, env, nil)
 	if err != nil {
 		log.Printf("Encountered error: %s", err)
-		w.WriteHeader(500)
+		w.WriteHeader(status)
 	}
 }

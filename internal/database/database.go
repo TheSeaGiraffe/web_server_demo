@@ -156,3 +156,24 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 
 	return chirps, nil
 }
+
+func (db *DB) GetChirpByID(id int) (Chirp, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	chirpDBStruct, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	if len(chirpDBStruct.Chirps) == 0 {
+		return Chirp{}, fmt.Errorf("No chirps in database")
+	}
+
+	chirp, ok := chirpDBStruct.Chirps[id]
+	if !ok {
+		return Chirp{}, fmt.Errorf("Chirp with ID '%d' does not exist", id)
+	}
+
+	return chirp, nil
+}
