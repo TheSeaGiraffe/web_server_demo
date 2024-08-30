@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"fmt"
@@ -7,12 +7,6 @@ import (
 
 type ApiOps struct {
 	fileserverHits int
-}
-
-func NewApiOps() *ApiOps {
-	return &ApiOps{
-		fileserverHits: 0,
-	}
 }
 
 func (cfg *ApiOps) MiddlewareMetricsInc(next http.Handler) http.Handler {

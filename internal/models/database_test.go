@@ -1,4 +1,4 @@
-package database
+package models
 
 import (
 	"cmp"
@@ -8,6 +8,8 @@ import (
 	"slices"
 	"testing"
 )
+
+// Re-write the tests to use golden files since the database is really just a JSON file
 
 const testDB = "chirp_db-test.json"
 

@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"cmp"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TheSeaGiraffe/web_server_demo/internal/database"
+	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
 )
 
 const replacementString = "****"
@@ -21,7 +21,7 @@ var badWords = map[string]struct{}{
 }
 
 type ChirpController struct {
-	DB *database.DB
+	DB *models.DB
 }
 
 func replaceBadWords(chirp string) string {
@@ -80,7 +80,7 @@ func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Reques
 
 	// Sort the chirps
 	if len(chirps) > 0 {
-		slices.SortFunc(chirps, func(a, b database.Chirp) int {
+		slices.SortFunc(chirps, func(a, b models.Chirp) int {
 			return cmp.Compare(a.ID, b.ID)
 		})
 	}
