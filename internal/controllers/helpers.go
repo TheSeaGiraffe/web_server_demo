@@ -8,7 +8,7 @@ import (
 
 type envelope map[string]any
 
-func writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
+func (app *Application) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -25,9 +25,9 @@ func writeJSON(w http.ResponseWriter, status int, data any, headers http.Header)
 	return nil
 }
 
-func errorResponse(w http.ResponseWriter, status int, message any) {
+func (app *Application) errorResponse(w http.ResponseWriter, status int, message any) {
 	env := envelope{"error": message}
-	err := writeJSON(w, status, env, nil)
+	err := app.writeJSON(w, status, env, nil)
 	if err != nil {
 		log.Printf("Encountered error: %s", err)
 		w.WriteHeader(status)

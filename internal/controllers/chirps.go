@@ -20,10 +20,6 @@ var badWords = map[string]struct{}{
 	"fornax":    {},
 }
 
-type ChirpController struct {
-	DB *models.DB
-}
-
 func replaceBadWords(chirp string) string {
 	chirpSplit := strings.Fields(chirp)
 	for i, word := range chirpSplit {
@@ -35,46 +31,46 @@ func replaceBadWords(chirp string) string {
 	return strings.Join(chirpSplit, " ")
 }
 
-func (c *ChirpController) CreateChirpHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) CreateChirpHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the JSON from the response body
 	var input struct {
 		Body string `json:"body"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		app.errorResponse(w, http.StatusInternalServerError, "Couldn't decode parameters")
 		return
 	}
 
 	// Check that response is <= 140 chars
 	const maxChirpLength = 140
 	if len(input.Body) > maxChirpLength {
-		errorResponse(w, http.StatusBadRequest, "Chirp is too long")
+		app.errorResponse(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
 
 	// Remove profanity
 	cleanedBody := replaceBadWords(input.Body)
-	chirp, err := c.DB.CreateChirp(cleanedBody)
+	chirp, err := app.DB.CreateChirp(cleanedBody)
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")
+		app.errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return
 	}
 
 	// Response is valid
 	// output := map[string]string{"cleaned_body": cleanedBody}
 	// err = writeJSON(w, http.StatusOK, output, nil)
-	err = writeJSON(w, http.StatusCreated, chirp, nil)
+	err = app.writeJSON(w, http.StatusCreated, chirp, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}
 }
 
-func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get chirps from database
-	chirps, err := c.DB.GetChirps()
+	chirps, err := app.DB.GetChirps()
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Couldn't load chirps from database")
+		app.errorResponse(w, http.StatusInternalServerError, "Couldn't load chirps from database")
 		return
 	}
 
@@ -86,29 +82,29 @@ func (c *ChirpController) GetChirpsHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return the chirps in a json response
-	err = writeJSON(w, http.StatusOK, chirps, nil)
+	err = app.writeJSON(w, http.StatusOK, chirps, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}
 }
 
-func (c *ChirpController) GetSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) GetSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
 	// Get chirp ID from URL path
 	chirpIDStr := r.PathValue("chirpID")
 	chirpID, err := strconv.Atoi(chirpIDStr)
 	if err != nil {
-		errorResponse(w, http.StatusBadRequest, "Invalid chirp ID")
+		app.errorResponse(w, http.StatusBadRequest, "Invalid chirp ID")
 		return
 	}
 
 	// Get the chirp with the specified ID
-	chirp, err := c.DB.GetChirpByID(chirpID)
+	chirp, err := app.DB.GetChirpByID(chirpID)
 	if err != nil {
-		errorResponse(w, http.StatusNotFound, "Chirp with that ID doesn't exist")
+		app.errorResponse(w, http.StatusNotFound, "Chirp with that ID doesn't exist")
 		return
 	}
 
-	err = writeJSON(w, http.StatusOK, chirp, nil)
+	err = app.writeJSON(w, http.StatusOK, chirp, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}

@@ -18,19 +18,24 @@ func main() {
 		log.Fatalf("Could not connect to DB: %s", err)
 	}
 
-	cont := controllers.NewControllers(DB)
+	cfg := controllers.NewApiConfig()
+
+	application := controllers.Application{
+		DB:     DB,
+		Config: cfg,
+	}
 
 	fileServer := http.FileServer(http.Dir(filepathRoot))
 	mux := http.NewServeMux()
-	mux.Handle("/app/*", cont.ApiOps.MiddlewareMetricsInc(http.StripPrefix("/app", fileServer)))
-	mux.HandleFunc("GET /admin/metrics", cont.ApiOps.AdminMetricsHandler)
-	mux.HandleFunc("GET /api/healthz", controllers.ReadinessHandler)
-	mux.HandleFunc("GET /api/reset", cont.ApiOps.ResetHits)
-	mux.HandleFunc("POST /api/chirps", cont.Chirps.CreateChirpHandler)
-	mux.HandleFunc("GET /api/chirps", cont.Chirps.GetChirpsHandler)
-	mux.HandleFunc("GET /api/chirps/{chirpID}", cont.Chirps.GetSingleChirpHandler)
-	mux.HandleFunc("POST /api/users", cont.Users.CreateUserHandler)
-	mux.HandleFunc("POST /api/login", cont.Users.LoginHandler)
+	mux.Handle("/app/*", application.MiddlewareMetricsInc(http.StripPrefix("/app", fileServer)))
+	mux.HandleFunc("GET /admin/metrics", application.AdminMetricsHandler)
+	mux.HandleFunc("GET /api/healthz", application.ReadinessHandler)
+	mux.HandleFunc("GET /api/reset", application.ResetHitsHandler)
+	mux.HandleFunc("POST /api/chirps", application.CreateChirpHandler)
+	mux.HandleFunc("GET /api/chirps", application.GetChirpsHandler)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", application.GetSingleChirpHandler)
+	mux.HandleFunc("POST /api/users", application.CreateUserHandler)
+	mux.HandleFunc("POST /api/login", application.LoginHandler)
 
 	// Setup and run server
 	srv := http.Server{
