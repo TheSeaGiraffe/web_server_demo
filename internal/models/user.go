@@ -2,15 +2,65 @@ package models
 
 import (
 	"cmp"
+	"errors"
 	"slices"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
+var ErrUserNotExist = errors.New("User does not exist")
+
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-func (db *DB) CreateUser(email string) (User, error) {
+const CryptCost = 12
+
+// Not sure if I even need this function. Will keep it for now.
+func (db *DB) hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), CryptCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// Think of a better way of doing this later
+func (db *DB) EmailExists(email string) (bool, error) {
+	_, err := db.GetUserByEmail(email)
+	if err != nil {
+		if errors.Is(err, ErrUserNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (db *DB) GetUserByEmail(email string) (User, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	// Load db
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	// Check if user with specified email exists
+	for _, user := range dbStruct.Users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+
+	return User{}, ErrUserNotExist
+}
+
+func (db *DB) CreateUser(email, password string) (User, error) {
 	// Lock db and defer unlocking
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -38,10 +88,16 @@ func (db *DB) CreateUser(email string) (User, error) {
 	}
 
 	// Create user
+	hashedPass, err := db.hashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
+
 	lastID++
 	user := User{
-		ID:    lastID,
-		Email: email,
+		ID:       lastID,
+		Email:    email,
+		Password: hashedPass,
 	}
 
 	// Write user to disk

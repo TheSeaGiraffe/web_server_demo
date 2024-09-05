@@ -30,6 +30,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", cont.Chirps.GetChirpsHandler)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cont.Chirps.GetSingleChirpHandler)
 	mux.HandleFunc("POST /api/users", cont.Users.CreateUserHandler)
+	mux.HandleFunc("POST /api/login", cont.Users.LoginHandler)
 
 	// Setup and run server
 	srv := http.Server{
