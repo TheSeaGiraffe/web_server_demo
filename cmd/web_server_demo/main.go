@@ -3,9 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/controllers"
 	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -18,8 +20,18 @@ func main() {
 		log.Fatalf("Could not connect to DB: %s", err)
 	}
 
-	cfg := controllers.NewApiConfig()
+	// Init config
+	// Maybe think about putting this in a separate function or even package
+	// I think it's okay to keep it like this for now
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatalf("Could not load environment variables: %s", err)
+	}
+	jwtSecret := os.Getenv("JWT_SECRET")
 
+	cfg := controllers.NewApiConfig(jwtSecret)
+
+	// Setup the routes
 	application := controllers.Application{
 		DB:     DB,
 		Config: cfg,

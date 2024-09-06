@@ -3,15 +3,46 @@ package controllers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/mail"
+	"time"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Implement a better validation system later. For now, just make sure that everything works.
+
+func (app *Application) generateJWT(secret string, userId int, expiryInSeconds *int) (string, error) {
+	// Create claims
+	defaultExpiry := time.Now().Add(24 * time.Hour)
+	var expiresAt time.Time
+	if expiryInSeconds == nil {
+		expiresAt = defaultExpiry
+	} else {
+		expiresAt = time.Now().Add(time.Duration(*expiryInSeconds) * time.Second)
+		if expiresAt.After(defaultExpiry) {
+			expiresAt = defaultExpiry
+		}
+	}
+	claims := jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
+		Subject:   fmt.Sprintf("%d", userId),
+	}
+
+	// Create JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
 
 func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the JSON from the response body
@@ -30,7 +61,6 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		app.errorResponse(w, http.StatusBadRequest, "Not a valid email")
 		return
-
 	}
 
 	// Check that email address is not being used
@@ -85,8 +115,9 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the JSON from the response body
 	var input struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds *int   `json:"expires_in_seconds"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -112,13 +143,22 @@ func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create JWT
+	token, err := app.generateJWT(app.Config.jwtSecret, user.ID, input.ExpiresInSeconds)
+	if err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, "Could not create JWT")
+		return
+	}
+
 	// Return user info sans password on successful login
 	output := struct {
 		ID    int    `json:"id"`
 		Email string `json:"email"`
+		Token string `json:"token"`
 	}{
 		user.ID,
 		user.Email,
+		token,
 	}
 	err = app.writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {

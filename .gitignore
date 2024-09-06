@@ -7,3 +7,6 @@ cmd/
 
 # Ignore db files
 chirp_db*.json
+
+# Ignore the .env file
+.env
