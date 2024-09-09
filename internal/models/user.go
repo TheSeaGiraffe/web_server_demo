@@ -60,6 +60,25 @@ func (db *DB) GetUserByEmail(email string) (User, error) {
 	return User{}, ErrUserNotExist
 }
 
+func (db *DB) GetUserByID(id int) (User, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	// Load db
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	// Check if user with specified id exists
+	user, ok := dbStruct.Users[id]
+	if ok {
+		return user, nil
+	}
+
+	return User{}, ErrUserNotExist
+}
+
 func (db *DB) CreateUser(email, password string) (User, error) {
 	// Lock db and defer unlocking
 	db.mu.Lock()
@@ -111,4 +130,40 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *DB) UpdateUser(id int, email, password string) error {
+	// Lock db and defer unlocking
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	// Load db
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	// Check that user with matching ID actually exists
+	_, ok := dbStruct.Users[id]
+	if !ok {
+		return ErrUserNotExist
+	}
+
+	// Write updated user info to disk
+	hashedPass, err := db.hashPassword(password)
+	if err != nil {
+		return err
+	}
+	user := User{
+		ID:       id,
+		Email:    email,
+		Password: hashedPass,
+	}
+	dbStruct.Users[id] = user
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

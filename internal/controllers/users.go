@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
+	"strconv"
 	"time"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
@@ -16,7 +17,7 @@ import (
 
 // Implement a better validation system later. For now, just make sure that everything works.
 
-func (app *Application) generateJWT(secret string, userId int, expiryInSeconds *int) (string, error) {
+func (app *Application) generateJWT(userId int, expiryInSeconds *int) (string, error) {
 	// Create claims
 	defaultExpiry := time.Now().Add(24 * time.Hour)
 	var expiresAt time.Time
@@ -37,11 +38,38 @@ func (app *Application) generateJWT(secret string, userId int, expiryInSeconds *
 
 	// Create JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secret))
+	tokenString, err := token.SignedString([]byte(app.Config.jwtSecret))
 	if err != nil {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func (app *Application) getIDFromJWT(tokenPlaintext string) (int, error) {
+	token, err := jwt.Parse(tokenPlaintext, func(t *jwt.Token) (interface{}, error) {
+		return []byte(app.Config.jwtSecret), nil
+	})
+	// Streamline the error handling logic later
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return 0, fmt.Errorf("Invalid token")
+	}
+
+	idStr, err := claims.GetSubject()
+	if err != nil {
+		return 0, fmt.Errorf("Could not retrieve user ID")
+	}
+
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
 }
 
 func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +172,7 @@ func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create JWT
-	token, err := app.generateJWT(app.Config.jwtSecret, user.ID, input.ExpiresInSeconds)
+	token, err := app.generateJWT(user.ID, input.ExpiresInSeconds)
 	if err != nil {
 		app.errorResponse(w, http.StatusInternalServerError, "Could not create JWT")
 		return
@@ -159,6 +187,39 @@ func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		user.ID,
 		user.Email,
 		token,
+	}
+	err = app.writeJSON(w, http.StatusOK, output, nil)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+	}
+}
+
+func (app *Application) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Get updated email and password from request body
+	var input struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	// Write updated user info to DB
+	userID := (app.contextGetUser(r)).ID
+	err = app.DB.UpdateUser(userID, input.Email, input.Password)
+	if err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, "Problem updating user info")
+	}
+
+	// Send response
+	output := struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+	}{
+		ID:    userID,
+		Email: input.Email,
 	}
 	err = app.writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {

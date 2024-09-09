@@ -47,12 +47,13 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", application.GetChirpsHandler)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", application.GetSingleChirpHandler)
 	mux.HandleFunc("POST /api/users", application.CreateUserHandler)
+	mux.HandleFunc("PUT /api/users", application.MiddlewareRequireUser(application.UpdateUserHandler))
 	mux.HandleFunc("POST /api/login", application.LoginHandler)
 
 	// Setup and run server
 	srv := http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: application.MiddlewareAuthenticate(mux), // Find a better way of doing this
 	}
 	log.Printf("Starting sever on port %s...\n", port)
 	log.Fatal(srv.ListenAndServe())
