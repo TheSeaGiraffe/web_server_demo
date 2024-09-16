@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
-	"strconv"
 	"time"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
@@ -15,11 +14,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const JWTDefaultExpiry = 1 * time.Hour
+
 // Implement a better validation system later. For now, just make sure that everything works.
 
 func (app *Application) generateJWT(userId int, expiryInSeconds *int) (string, error) {
 	// Create claims
-	defaultExpiry := time.Now().Add(1 * time.Hour)
+	defaultExpiry := time.Now().Add(JWTDefaultExpiry)
 	var expiresAt time.Time
 	if expiryInSeconds == nil {
 		expiresAt = defaultExpiry
@@ -43,33 +44,6 @@ func (app *Application) generateJWT(userId int, expiryInSeconds *int) (string, e
 		return "", err
 	}
 	return tokenString, nil
-}
-
-func (app *Application) getIDFromJWT(tokenPlaintext string) (int, error) {
-	token, err := jwt.Parse(tokenPlaintext, func(t *jwt.Token) (interface{}, error) {
-		return []byte(app.Config.jwtSecret), nil
-	})
-	// Streamline the error handling logic later
-	if err != nil {
-		return 0, err
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return 0, fmt.Errorf("Invalid token")
-	}
-
-	idStr, err := claims.GetSubject()
-	if err != nil {
-		return 0, fmt.Errorf("Could not retrieve user ID")
-	}
-
-	userID, err := strconv.Atoi(idStr)
-	if err != nil {
-		return 0, err
-	}
-
-	return userID, nil
 }
 
 func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request) {

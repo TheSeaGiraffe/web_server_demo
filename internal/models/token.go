@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"time"
 )
@@ -51,6 +52,14 @@ func (db *DB) createNewToken(tokenPlaintext string, userID, lastID int) Token {
 		Expiry:    time.Now().Add(TokenExpiryInDays * 24 * time.Hour),
 		UserID:    userID,
 	}
+}
+
+func (db *DB) GetRefreshTokenByteLen(tokenPlaintext string) (int, error) {
+	hexBytes, err := hex.DecodeString(tokenPlaintext)
+	if err != nil {
+		return 0, err
+	}
+	return len(hexBytes), nil
 }
 
 func (db *DB) CreateRefreshToken(userID int) (Token, error) {
@@ -139,38 +148,48 @@ func (db *DB) DeleteRefreshToken(tokenID int) error {
 	return nil
 }
 
-func (db *DB) GetRefreshTokenByUserId(userID int) (Token, error) {
-	db.mu.RLock()
-	defer db.mu.Unlock()
-
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return Token{}, nil
-	}
-
-	for _, token := range dbStruct.Tokens {
-		if token.UserID == userID {
-			return token, nil
-		}
-	}
-
-	return Token{}, ErrTokenNotExist
-}
-
-func (db *DB) GetUserIdByRefreshToken(tokenPlaintext string) (int, error) {
+func (db *DB) RefreshTokenExpired(tokenPlaintext string) (bool, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
 	dbStruct, err := db.loadDB()
 	if err != nil {
-		return 0, err
+		return false, err
 	}
 
 	for _, token := range dbStruct.Tokens {
 		if token.Plaintext == tokenPlaintext {
-			return token.UserID, nil
+			log.Printf("Current time: %v", time.Now())
+			log.Printf("Token expiry: %v", token.Expiry)
+			log.Printf("Current time is after token expiry: %v", time.Now().After(token.Expiry))
+			return time.Now().After(token.Expiry), nil
 		}
 	}
 
-	return 0, fmt.Errorf("Token does not exist")
+	return false, ErrTokenNotExist
+}
+
+func (db *DB) GetUserByRefreshToken(tokenPlaintext string) (User, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	var userID int
+	for _, token := range dbStruct.Tokens {
+		if token.Plaintext == tokenPlaintext {
+			userID = token.UserID
+		}
+	}
+
+	if userID == 0 {
+		return User{}, ErrTokenNotExist
+	}
+
+	user := dbStruct.Users[userID]
+
+	return user, nil
 }

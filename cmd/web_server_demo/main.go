@@ -49,6 +49,8 @@ func main() {
 	mux.HandleFunc("POST /api/users", application.CreateUserHandler)
 	mux.HandleFunc("PUT /api/users", application.MiddlewareRequireUser(application.UpdateUserHandler))
 	mux.HandleFunc("POST /api/login", application.LoginHandler)
+	mux.HandleFunc("POST /api/refresh",
+		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RefreshAccessTokenHandler)))
 
 	// Setup and run server
 	srv := http.Server{

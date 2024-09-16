@@ -4,10 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/TheSeaGiraffe/web_server_demo/internal/models"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (app *Application) MiddlewareMetricsInc(next http.Handler) http.Handler {
@@ -19,7 +22,12 @@ func (app *Application) MiddlewareMetricsInc(next http.Handler) http.Handler {
 
 func (app *Application) isTokenJWT(token string) (bool, error) {
 	// Attempt to split the token by '.'
-	jwtHeader := strings.Split(token, ".")[0]
+	jwtSplit := strings.Split(token, ".")
+	if len(jwtSplit) != 3 {
+		return false, nil
+	}
+
+	jwtHeader := jwtSplit[0]
 	decodedJWTHeader, err := base64.StdEncoding.DecodeString(jwtHeader)
 	if err != nil {
 		return false, err
@@ -45,6 +53,33 @@ func (app *Application) isTokenJWT(token string) (bool, error) {
 	default:
 		return true, nil
 	}
+}
+
+func (app *Application) getIDFromJWT(tokenPlaintext string) (int, error) {
+	token, err := jwt.Parse(tokenPlaintext, func(t *jwt.Token) (interface{}, error) {
+		return []byte(app.Config.jwtSecret), nil
+	})
+	// Streamline the error handling logic later
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return 0, fmt.Errorf("Invalid token")
+	}
+
+	idStr, err := claims.GetSubject()
+	if err != nil {
+		return 0, fmt.Errorf("Could not retrieve user ID")
+	}
+
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
 }
 
 func (app *Application) MiddlewareAuthenticateJWT(next http.Handler) http.Handler {
@@ -102,11 +137,50 @@ func (app *Application) MiddlewareAuthenticateJWT(next http.Handler) http.Handle
 
 func (app *Application) MiddlewareAuthenticateRefresh(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user := app.contextGetUser(r)
-		if user == nil {
-			app.authenticationRequiredResponse(w, r)
+		w.Header().Add("Vary", "Authorization")
+
+		authorizationHeader := r.Header.Get("Authorization")
+		if authorizationHeader == "" {
+			next(w, r)
 			return
 		}
+
+		headerParts := strings.Split(authorizationHeader, " ")
+		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+			app.invalidCredentialsResponse(w, r)
+			return
+		}
+
+		// Validate token
+		token := headerParts[1]
+		tokenLen, err := app.DB.GetRefreshTokenByteLen(token)
+		if (err != nil) || (tokenLen != models.RefreshTokenLen) {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		// Check if token has expired
+		isExpired, err := app.DB.RefreshTokenExpired(token)
+		if err != nil {
+			app.serverErrorResponse(w, r)
+			return
+		}
+		if isExpired {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		// Get user associated with token
+		user, err := app.DB.GetUserByRefreshToken(token)
+		if err != nil {
+			// In the event of an error, just return the handler
+			next(w, r)
+			return
+		}
+
+		// Add user to context
+		r = app.contextSetUser(r, &user)
+
 		next(w, r)
 	}
 }
