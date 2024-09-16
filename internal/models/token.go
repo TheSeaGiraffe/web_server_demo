@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"time"
 )
@@ -159,9 +158,6 @@ func (db *DB) RefreshTokenExpired(tokenPlaintext string) (bool, error) {
 
 	for _, token := range dbStruct.Tokens {
 		if token.Plaintext == tokenPlaintext {
-			log.Printf("Current time: %v", time.Now())
-			log.Printf("Token expiry: %v", token.Expiry)
-			log.Printf("Current time is after token expiry: %v", time.Now().After(token.Expiry))
 			return time.Now().After(token.Expiry), nil
 		}
 	}
