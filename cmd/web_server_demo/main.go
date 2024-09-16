@@ -53,7 +53,7 @@ func main() {
 	// Setup and run server
 	srv := http.Server{
 		Addr:    ":" + port,
-		Handler: application.MiddlewareAuthenticate(mux), // Find a better way of doing this
+		Handler: application.MiddlewareAuthenticateJWT(mux), // Find a better way of doing this
 	}
 	log.Printf("Starting sever on port %s...\n", port)
 	log.Fatal(srv.ListenAndServe())

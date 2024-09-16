@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -15,7 +17,37 @@ func (app *Application) MiddlewareMetricsInc(next http.Handler) http.Handler {
 	})
 }
 
-func (app *Application) MiddlewareAuthenticate(next http.Handler) http.Handler {
+func (app *Application) isTokenJWT(token string) (bool, error) {
+	// Attempt to split the token by '.'
+	jwtHeader := strings.Split(token, ".")[0]
+	decodedJWTHeader, err := base64.StdEncoding.DecodeString(jwtHeader)
+	if err != nil {
+		return false, err
+	}
+
+	// Attempt to unmarshal the header
+	var headerJSON struct {
+		Algorithm string `json:"alg"`
+		Type      string `json:"typ"`
+	}
+	err = json.Unmarshal([]byte(decodedJWTHeader), &headerJSON)
+	if err != nil {
+		return false, err
+	}
+
+	// Check that the header has "typ" and "alg" fields
+	// Need to add a proper check for the "alg" field later
+	switch {
+	case (headerJSON.Algorithm == "") || (headerJSON.Type == ""):
+		return false, nil
+	case headerJSON.Type != "JWT":
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+func (app *Application) MiddlewareAuthenticateJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Vary", "Authorization")
 
@@ -32,6 +64,18 @@ func (app *Application) MiddlewareAuthenticate(next http.Handler) http.Handler {
 		}
 
 		token := headerParts[1]
+		ok, err := app.isTokenJWT(token)
+		if err != nil {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		// Should be a refresh token so we don't authenticate the user
+		if !ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		userID, err := app.getIDFromJWT(token)
 		if err != nil {
 			app.invalidAuthenticationTokenResponse(w, r)
@@ -54,6 +98,17 @@ func (app *Application) MiddlewareAuthenticate(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (app *Application) MiddlewareAuthenticateRefresh(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+		if user == nil {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func (app *Application) MiddlewareRequireUser(next http.HandlerFunc) http.HandlerFunc {

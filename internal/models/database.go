@@ -17,6 +17,7 @@ type DB struct {
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
 	Users  map[int]User  `json:"users"`
+	Tokens map[int]Token `json:"tokens"`
 }
 
 // NewDB creates a new database connection and creates a database file if it doesn't exist

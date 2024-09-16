@@ -19,7 +19,7 @@ import (
 
 func (app *Application) generateJWT(userId int, expiryInSeconds *int) (string, error) {
 	// Create claims
-	defaultExpiry := time.Now().Add(24 * time.Hour)
+	defaultExpiry := time.Now().Add(1 * time.Hour)
 	var expiresAt time.Time
 	if expiryInSeconds == nil {
 		expiresAt = defaultExpiry
@@ -178,15 +178,23 @@ func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create refresh token
+	refreshToken, err := app.DB.CreateRefreshToken(user.ID)
+	if err != nil {
+		app.errorResponse(w, http.StatusInternalServerError, "Could not create refresh token")
+	}
+
 	// Return user info sans password on successful login
 	output := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-		Token string `json:"token"`
+		ID           int    `json:"id"`
+		Email        string `json:"email"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}{
 		user.ID,
 		user.Email,
 		token,
+		refreshToken.Plaintext,
 	}
 	err = app.writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {
