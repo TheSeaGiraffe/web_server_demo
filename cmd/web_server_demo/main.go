@@ -51,6 +51,8 @@ func main() {
 	mux.HandleFunc("POST /api/login", application.LoginHandler)
 	mux.HandleFunc("POST /api/refresh",
 		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RefreshAccessTokenHandler)))
+	mux.HandleFunc("POST /api/revoke",
+		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RevokeRefreshTokenHandler)))
 
 	// Setup and run server
 	srv := http.Server{

@@ -162,6 +162,10 @@ func (app *Application) MiddlewareAuthenticateRefresh(next http.HandlerFunc) htt
 		// Check if token has expired
 		isExpired, err := app.DB.RefreshTokenExpired(token)
 		if err != nil {
+			if errors.Is(err, models.ErrTokenNotExist) {
+				app.invalidAuthenticationTokenResponse(w, r)
+				return
+			}
 			app.serverErrorResponse(w, r)
 			return
 		}

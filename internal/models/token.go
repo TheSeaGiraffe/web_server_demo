@@ -53,6 +53,24 @@ func (db *DB) createNewToken(tokenPlaintext string, userID, lastID int) Token {
 	}
 }
 
+func (db *DB) GetTokenByUserID(userID int) (Token, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return Token{}, err
+	}
+
+	for _, token := range dbStruct.Tokens {
+		if token.UserID == userID {
+			return token, nil
+		}
+	}
+
+	return Token{}, ErrTokenNotExist
+}
+
 func (db *DB) GetRefreshTokenByteLen(tokenPlaintext string) (int, error) {
 	hexBytes, err := hex.DecodeString(tokenPlaintext)
 	if err != nil {
