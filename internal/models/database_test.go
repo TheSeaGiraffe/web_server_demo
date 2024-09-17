@@ -14,10 +14,10 @@ import (
 const testDB = "chirp_db-test.json"
 
 var testChirps = []Chirp{
-	{1, "The first chirp"},
-	{2, "Another chirp"},
-	{5, "That was some great mac 'n cheese we had last night"},
-	{10, "Anyone else gotta deal with noisy neighbors. I'm losing sleep over here!"},
+	{1, "The first chirp", 1},
+	{2, "Another chirp", 2},
+	{5, "That was some great mac 'n cheese we had last night", 3},
+	{10, "Anyone else gotta deal with noisy neighbors. I'm losing sleep over here!", 4},
 }
 
 // Setup test DB and populate it with test cases
@@ -98,7 +98,7 @@ func testChirpDB_GetChirps(chirpDB *DB) func(t *testing.T) {
 func testChirpDB_CreateChirp(chirpDB *DB) func(t *testing.T) {
 	return func(t *testing.T) {
 		newChirpBody := "Have you guys checked out that new pizza place yet?"
-		chirp, err := chirpDB.CreateChirp(newChirpBody)
+		chirp, err := chirpDB.CreateChirp(newChirpBody, 1)
 		if err != nil {
 			t.Fatalf("could not create chirp: %v", err)
 		}

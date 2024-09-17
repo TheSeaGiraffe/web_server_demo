@@ -49,9 +49,10 @@ func (app *Application) CreateChirpHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Remove profanity
+	// Remove profanity and get user ID
+	userID := (app.contextGetUser(r)).ID
 	cleanedBody := replaceBadWords(input.Body)
-	chirp, err := app.DB.CreateChirp(cleanedBody)
+	chirp, err := app.DB.CreateChirp(cleanedBody, userID)
 	if err != nil {
 		app.errorResponse(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return

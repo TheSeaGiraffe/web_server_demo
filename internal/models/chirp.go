@@ -7,12 +7,13 @@ import (
 )
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	Body     string `json:"body"`
+	AuthorID int    `json:"author_id"`
 }
 
 // CreateChirp creates a new chirp and saves it to disk
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, authorID int) (Chirp, error) {
 	// Lock db and defer unlocking
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -42,8 +43,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	// Create chirp
 	lastID++
 	chirp := Chirp{
-		ID:   lastID,
-		Body: body,
+		ID:       lastID,
+		Body:     body,
+		AuthorID: authorID,
 	}
 
 	// Write chirp to disk
