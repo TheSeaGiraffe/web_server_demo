@@ -110,3 +110,35 @@ func (app *Application) GetSingleChirpHandler(w http.ResponseWriter, r *http.Req
 		log.Printf("Error marshalling JSON: %s", err)
 	}
 }
+
+func (app *Application) DeleteChirpHandler(w http.ResponseWriter, r *http.Request) {
+	// Get chirp ID from URL path
+	chirpIDStr := r.PathValue("chirpID")
+	chirpID, err := strconv.Atoi(chirpIDStr)
+	if err != nil {
+		app.errorResponse(w, http.StatusBadRequest, "Invalid chirp ID")
+		return
+	}
+
+	// Get the chirp with the specified ID
+	chirp, err := app.DB.GetChirpByID(chirpID)
+	if err != nil {
+		app.errorResponse(w, http.StatusNotFound, "Chirp with that ID doesn't exist")
+		return
+	}
+
+	userID := (app.contextGetUser(r)).ID
+	if chirp.AuthorID != userID {
+		app.errorResponse(w, http.StatusForbidden, "User is not allowed to access this resource")
+		return
+	}
+
+	// Delete the chirp with the specified ID
+	err = app.DB.DeleteChirpByID(chirpID)
+	if err != nil {
+		app.errorResponse(w, http.StatusNotFound, "Chirp with that ID doesn't exist")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -46,6 +46,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", application.MiddlewareRequireUser(application.CreateChirpHandler))
 	mux.HandleFunc("GET /api/chirps", application.GetChirpsHandler)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", application.GetSingleChirpHandler)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", application.MiddlewareRequireUser(application.DeleteChirpHandler))
 	mux.HandleFunc("POST /api/users", application.CreateUserHandler)
 	mux.HandleFunc("PUT /api/users", application.MiddlewareRequireUser(application.UpdateUserHandler))
 	mux.HandleFunc("POST /api/login", application.LoginHandler)

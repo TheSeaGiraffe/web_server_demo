@@ -2,9 +2,12 @@ package models
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"slices"
 )
+
+var ErrChirpNotExist = errors.New("Chirp does not exist")
 
 type Chirp struct {
 	ID       int    `json:"id"`
@@ -102,4 +105,28 @@ func (db *DB) GetChirpByID(id int) (Chirp, error) {
 	}
 
 	return chirp, nil
+}
+
+func (db *DB) DeleteChirpByID(id int) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	_, ok := dbStruct.Chirps[id]
+	if !ok {
+		return ErrChirpNotExist
+	}
+
+	delete(dbStruct.Chirps, id)
+
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
