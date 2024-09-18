@@ -75,15 +75,34 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Sort the chirps
+	// Sort the chirps and then filter by "author_id" if it is provided
+	var chirpsFiltered []models.Chirp
 	if len(chirps) > 0 {
 		slices.SortFunc(chirps, func(a, b models.Chirp) int {
 			return cmp.Compare(a.ID, b.ID)
 		})
+
+		var authorID int
+		authorIDString := r.URL.Query().Get("author_id")
+		if authorIDString != "" {
+			authorID, err = strconv.Atoi(authorIDString)
+			if err != nil {
+				app.serverErrorResponse(w, r)
+				return
+			}
+			for _, chirp := range chirps {
+				if chirp.AuthorID == authorID {
+					chirpsFiltered = append(chirpsFiltered, chirp)
+				}
+			}
+		} else {
+			chirpsFiltered = chirps
+		}
+
 	}
 
 	// Return the chirps in a json response
-	err = app.writeJSON(w, http.StatusOK, chirps, nil)
+	err = app.writeJSON(w, http.StatusOK, chirpsFiltered, nil)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
 	}
