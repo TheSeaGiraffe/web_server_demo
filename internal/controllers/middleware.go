@@ -93,8 +93,14 @@ func (app *Application) MiddlewareAuthenticateJWT(next http.Handler) http.Handle
 		}
 
 		headerParts := strings.Split(authorizationHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+		if len(headerParts) != 2 || !((headerParts[0] == "Bearer") || (headerParts[0] == "ApiKey")) {
 			app.invalidCredentialsResponse(w, r)
+			return
+		}
+
+		// Polka API key. Allow through for authentication by Polka API Key middleware
+		if headerParts[0] == "ApiKey" {
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -184,6 +190,34 @@ func (app *Application) MiddlewareAuthenticateRefresh(next http.HandlerFunc) htt
 
 		// Add user to context
 		r = app.contextSetUser(r, &user)
+
+		next(w, r)
+	}
+}
+
+func (app *Application) MiddlewareAuthenticatePolka(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Authorization")
+
+		authorizationHeader := r.Header.Get("Authorization")
+		if authorizationHeader == "" {
+			app.invalidCredentialsResponse(w, r)
+			return
+		}
+
+		headerParts := strings.Split(authorizationHeader, " ")
+		if len(headerParts) != 2 || headerParts[0] != "ApiKey" {
+			app.invalidCredentialsResponse(w, r)
+			return
+		}
+
+		// Validate token
+		apiKey := headerParts[1]
+
+		if apiKey != app.Config.polkaApiKey {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
 
 		next(w, r)
 	}

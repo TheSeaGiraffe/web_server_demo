@@ -28,8 +28,9 @@ func main() {
 		log.Fatalf("Could not load environment variables: %s", err)
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
+	polkaApiKey := os.Getenv("POLKA_API_KEY")
 
-	cfg := controllers.NewApiConfig(jwtSecret)
+	cfg := controllers.NewApiConfig(jwtSecret, polkaApiKey)
 
 	// Setup the routes
 	application := controllers.Application{
@@ -54,7 +55,7 @@ func main() {
 		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RefreshAccessTokenHandler)))
 	mux.HandleFunc("POST /api/revoke",
 		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RevokeRefreshTokenHandler)))
-	mux.HandleFunc("POST /api/polka/webhooks", application.UpgradeToChirpyRedHandler)
+	mux.HandleFunc("POST /api/polka/webhooks", application.MiddlewareAuthenticatePolka(application.UpgradeToChirpyRedHandler))
 
 	// Setup and run server
 	srv := http.Server{

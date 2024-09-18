@@ -3,12 +3,14 @@ package controllers
 type ApiConfig struct {
 	fileserverHits int
 	jwtSecret      string
+	polkaApiKey    string
 }
 
-func NewApiConfig(secret string) ApiConfig {
+func NewApiConfig(jwtSecret, polkaApiKey string) ApiConfig {
 	return ApiConfig{
 		fileserverHits: 0,
-		jwtSecret:      secret,
+		jwtSecret:      jwtSecret,
+		polkaApiKey:    polkaApiKey,
 	}
 }
 
