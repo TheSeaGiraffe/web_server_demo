@@ -11,9 +11,10 @@ import (
 var ErrUserNotExist = errors.New("User does not exist")
 
 type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	ID          int    `json:"id"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 const CryptCost = 12
@@ -114,9 +115,10 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 
 	lastID++
 	user := User{
-		ID:       lastID,
-		Email:    email,
-		Password: hashedPass,
+		ID:          lastID,
+		Email:       email,
+		Password:    hashedPass,
+		IsChirpyRed: false,
 	}
 
 	// Write user to disk
@@ -144,7 +146,7 @@ func (db *DB) UpdateUser(id int, email, password string) error {
 	}
 
 	// Check that user with matching ID actually exists
-	_, ok := dbStruct.Users[id]
+	user, ok := dbStruct.Users[id]
 	if !ok {
 		return ErrUserNotExist
 	}
@@ -154,10 +156,11 @@ func (db *DB) UpdateUser(id int, email, password string) error {
 	if err != nil {
 		return err
 	}
-	user := User{
-		ID:       id,
-		Email:    email,
-		Password: hashedPass,
+	user = User{
+		ID:          id,
+		Email:       email,
+		Password:    hashedPass,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	dbStruct.Users[id] = user
 	err = db.writeDB(dbStruct)

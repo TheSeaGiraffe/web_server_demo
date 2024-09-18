@@ -102,11 +102,13 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 
 	// Response is valid
 	output := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
+		ID          int    `json:"id"`
+		Email       string `json:"email"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}{
 		user.ID,
 		user.Email,
+		user.IsChirpyRed,
 	}
 	err = app.writeJSON(w, http.StatusCreated, output, nil)
 	if err != nil {
@@ -162,11 +164,13 @@ func (app *Application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	output := struct {
 		ID           int    `json:"id"`
 		Email        string `json:"email"`
+		IsChirpyRed  bool   `json:"is_chirpy_red"`
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}{
 		user.ID,
 		user.Email,
+		user.IsChirpyRed,
 		token,
 		refreshToken.Plaintext,
 	}
@@ -189,19 +193,21 @@ func (app *Application) UpdateUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Write updated user info to DB
-	userID := (app.contextGetUser(r)).ID
-	err = app.DB.UpdateUser(userID, input.Email, input.Password)
+	user := app.contextGetUser(r)
+	err = app.DB.UpdateUser(user.ID, input.Email, input.Password)
 	if err != nil {
 		app.errorResponse(w, http.StatusInternalServerError, "Problem updating user info")
 	}
 
 	// Send response
 	output := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
+		ID          int    `json:"id"`
+		Email       string `json:"email"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}{
-		ID:    userID,
-		Email: input.Email,
+		ID:          user.ID,
+		Email:       input.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	err = app.writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {

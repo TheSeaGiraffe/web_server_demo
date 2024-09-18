@@ -54,6 +54,7 @@ func main() {
 		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RefreshAccessTokenHandler)))
 	mux.HandleFunc("POST /api/revoke",
 		application.MiddlewareAuthenticateRefresh(application.MiddlewareRequireUser(application.RevokeRefreshTokenHandler)))
+	mux.HandleFunc("POST /api/polka/webhooks", application.UpgradeToChirpyRedHandler)
 
 	// Setup and run server
 	srv := http.Server{
