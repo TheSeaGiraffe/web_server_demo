@@ -67,6 +67,14 @@ func (app *Application) CreateChirpHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func sortChirpsAsc(a, b models.Chirp) int {
+	return cmp.Compare(a.ID, b.ID)
+}
+
+func sortChirpsDesc(a, b models.Chirp) int {
+	return -cmp.Compare(a.ID, b.ID)
+}
+
 func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get chirps from database
 	chirps, err := app.DB.GetChirps()
@@ -78,9 +86,15 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 	// Sort the chirps and then filter by "author_id" if it is provided
 	var chirpsFiltered []models.Chirp
 	if len(chirps) > 0 {
-		slices.SortFunc(chirps, func(a, b models.Chirp) int {
-			return cmp.Compare(a.ID, b.ID)
-		})
+		sortDirection := strings.ToLower(r.URL.Query().Get("sort"))
+		switch sortDirection {
+		case "desc":
+			slices.SortFunc(chirps, sortChirpsDesc)
+		case "asc":
+			fallthrough
+		default:
+			slices.SortFunc(chirps, sortChirpsAsc)
+		}
 
 		var authorID int
 		authorIDString := r.URL.Query().Get("author_id")
